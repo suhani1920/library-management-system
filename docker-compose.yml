@@ -1,0 +1,66 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-local-root-only}
+      MYSQL_DATABASE: ${DB_NAME:-libracore}
+      MYSQL_USER: ${DB_USER:-libracore}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-libracore_dev}
+    ports:
+      - "3306:3306"
+    volumes:
+      - libracore_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      APP_NAME: ${APP_NAME:-LibraCore}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Kolkata}
+      APP_URL: http://localhost:5173
+      API_URL: http://localhost:4000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-libracore}
+      DB_USER: ${DB_USER:-libracore}
+      DB_PASSWORD: ${DB_PASSWORD:-libracore_dev}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-access-secret-change-before-deployment-32}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-local-refresh-secret-change-before-deployment-32}
+      CORS_ORIGIN: http://localhost:5173
+      COOKIE_SECURE: "false"
+      COOKIE_SAMESITE: lax
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@libracore.local}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-ChangeMe#Admin1}
+      SEED_LIBRARIAN_PASSWORD: ${SEED_LIBRARIAN_PASSWORD:-ChangeMe#Lib1}
+      SEED_STUDENT_PASSWORD: ${SEED_STUDENT_PASSWORD:-ChangeMe#Stu1}
+      UPLOAD_DIR: uploads
+    command: sh -c "npm run migrate && npm run seed && npm start"
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:4000/api/v1
+      VITE_APP_NAME: ${APP_NAME:-LibraCore}
+    ports:
+      - "5173:5173"
+
+volumes:
+  libracore_mysql:

@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+coverage/
+.env
+.env.local
+.env.*.local
+uploads/
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+backend/tmp/
+frontend/test-results/
+docker-data/
