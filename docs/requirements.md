@@ -26,7 +26,7 @@ Campus libraries need one reliable record of titles, individual copies, members,
 - [x] Express API v1, cookie authentication, CSRF, permission middleware, validation, and centralized errors.
 - [x] MySQL pool, initial InnoDB migration, and development seed.
 - [x] Backend catalogue/member/circulation/reservation/fine/payment/notification/report/admin service modules.
-- [x] Frontend login, session restore, dashboards, catalogue, inventory title/copy management, notifications, member directory/self-service, and circulation desk.
+- [x] Frontend login, session restore, dashboards, catalogue, inventory title/copy management, member self-checkout, notifications, member directory/self-service, and circulation desk.
 - [x] Frontend reservations, fine ledger/manual payment recording, waiver actions, reports, staff account/settings/branch/audit surfaces.
 - [x] Database-free health/security tests and pure circulation-policy tests.
 - [ ] Catalogue cover uploads, bulk CSV import/export, barcode labels, reservation fulfillment/priority actions, and payment history view.

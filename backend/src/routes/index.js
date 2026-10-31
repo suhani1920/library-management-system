@@ -8,6 +8,7 @@ import * as books from '../controllers/bookController.js';
 import * as circ from '../controllers/circulationController.js';
 import * as members from '../controllers/memberController.js';
 import * as misc from '../controllers/miscController.js';
+import * as announcements from '../controllers/announcementController.js';
 import { ROLE_CODES } from '../config/permissions.js';
 
 const loginLimiter = rateLimit({
@@ -52,6 +53,8 @@ router.post('/members/:memberId/renew', requireAuth, requirePermission(PERMISSIO
 
 router.post('/loans/preview-issue', requireAuth, requirePermission(PERMISSIONS.CIRCULATION), circ.previewIssue);
 router.post('/loans/issue', requireAuth, requirePermission(PERMISSIONS.CIRCULATION), circ.issue);
+router.post('/loans/self-preview', requireAuth, circ.previewMemberIssue);
+router.post('/loans/self-issue', requireAuth, circ.issueMemberBook);
 router.get('/loans/preview-return', requireAuth, requirePermission(PERMISSIONS.CIRCULATION), circ.previewReturn);
 router.get('/loans', requireAuth, circ.listLoans);
 router.get('/loans/overdue', requireAuth, circ.listLoans);
@@ -80,6 +83,8 @@ router.post('/notifications/read-all', requireAuth, misc.markAllRead);
 router.get('/admin/users', requireAuth, requirePermission(PERMISSIONS.USERS_MANAGE), misc.listUsers);
 router.post('/admin/users', requireAuth, requirePermission(PERMISSIONS.USERS_MANAGE), misc.createUser);
 router.post('/admin/users/:userId/status', requireAuth, requirePermission(PERMISSIONS.USERS_MANAGE), misc.userStatus);
+router.get('/admin/announcements', requireAuth, requirePermission(PERMISSIONS.USERS_MANAGE), announcements.list);
+router.post('/admin/announcements', requireAuth, requirePermission(PERMISSIONS.USERS_MANAGE), announcements.send);
 router.get('/admin/audit-logs', requireAuth, requirePermission(PERMISSIONS.AUDIT_VIEW), misc.auditLogs);
 router.get('/admin/settings', requireAuth, requirePermission(PERMISSIONS.SETTINGS_MANAGE), misc.settings);
 router.patch('/admin/settings', requireAuth, requirePermission(PERMISSIONS.SETTINGS_MANAGE), misc.patchSettings);

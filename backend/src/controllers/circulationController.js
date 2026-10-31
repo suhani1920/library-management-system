@@ -1,6 +1,6 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import * as circulation from '../services/circulationService.js';
-import { parseBody, issueSchema, returnSchema } from '../validators/schemas.js';
+import { parseBody, issueSchema, memberIssueSchema, returnSchema } from '../validators/schemas.js';
 import { query } from '../database/pool.js';
 import { paginated, parsePagination } from '../utils/pagination.js';
 import { ROLE_CODES } from '../config/permissions.js';
@@ -14,6 +14,19 @@ export const previewIssue = asyncHandler(async (req, res) => {
 export const issue = asyncHandler(async (req, res) => {
   const body = parseBody(issueSchema, req.body);
   const result = await circulation.issueLoan({ ...body, actor: req.user, req });
+  res.status(201).json({ data: result });
+});
+
+export const previewMemberIssue = asyncHandler(async (req, res) => {
+  if (req.user.role_code !== ROLE_CODES.MEMBER) throw forbidden();
+  const body = parseBody(memberIssueSchema, req.body);
+  res.json({ data: await circulation.previewMemberIssue({ userId: req.user.id, bookId: body.bookId }) });
+});
+
+export const issueMemberBook = asyncHandler(async (req, res) => {
+  if (req.user.role_code !== ROLE_CODES.MEMBER) throw forbidden();
+  const body = parseBody(memberIssueSchema, req.body);
+  const result = await circulation.issueMemberBook({ ...body, userId: req.user.id, actor: req.user, req });
   res.status(201).json({ data: result });
 });
 

@@ -42,6 +42,11 @@ export const issueSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const memberIssueSchema = z.object({
+  bookId: z.number().int().positive(),
+  notes: z.string().max(500).optional(),
+});
+
 export const returnSchema = z.object({
   loanId: z.number().int().optional(),
   barcode: z.string().optional(),
@@ -56,6 +61,11 @@ export const paymentSchema = z.object({
   method: z.enum(['cash', 'card', 'upi', 'other']).optional(),
   notes: z.string().optional(),
   allocations: z.array(z.object({ fineId: z.number().int(), amount: z.number().positive() })).optional(),
+});
+
+export const announcementSchema = z.object({
+  title: z.string().trim().min(3).max(180),
+  body: z.string().trim().min(5).max(2000),
 });
 
 export function parseBody(schema, body) {

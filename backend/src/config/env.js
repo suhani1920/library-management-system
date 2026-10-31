@@ -54,8 +54,8 @@ export const env = {
     from: process.env.SMTP_FROM || 'LibraCore <noreply@localhost>',
   },
   seed: {
-    adminEmail: process.env.SEED_ADMIN_EMAIL || 'admin@libracore.local',
-    adminPassword: process.env.SEED_ADMIN_PASSWORD || 'ChangeMe#Admin1',
+    adminEmail:  'itsmenatasha192003@gmail.com',
+    adminPassword: 'Qwerty#123',
     librarianPassword: process.env.SEED_LIBRARIAN_PASSWORD || 'ChangeMe#Lib1',
     studentPassword: process.env.SEED_STUDENT_PASSWORD || 'ChangeMe#Stu1',
   },

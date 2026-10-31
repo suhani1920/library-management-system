@@ -44,6 +44,11 @@ export async function staffSummary(branchId) {
       `SELECT COALESCE(SUM(outstanding_amount),0) AS n FROM fines WHERE status IN ('outstanding','partial')`,
     )
   )[0];
+  const collectedFines = (
+    await query(
+      `SELECT COALESCE(SUM(amount),0) AS n FROM payments WHERE status = 'completed'`,
+    )
+  )[0];
   const addedMonth = (
     await query(`SELECT COUNT(*) AS n FROM books WHERE created_at >= DATE_FORMAT(UTC_TIMESTAMP(), '%Y-%m-01')`)
   )[0];
@@ -108,17 +113,18 @@ export async function staffSummary(branchId) {
 
   return {
     metrics: {
-      activeTitles: Number(titles[0].n),
-      totalCopies: Number(copies[0].n),
-      availableCopies: Number(available[0].n),
-      issuedCopies: Number(issued[0].n),
-      activeMembers: Number(members[0].n),
-      overdueLoans: Number(overdue[0].n),
-      reservationsWaiting: Number(reservations[0].n),
-      outstandingFines: Number(fines[0].n),
-      booksAddedThisMonth: Number(addedMonth[0].n),
-      issuesToday: Number(issuesToday[0].n),
-      returnsToday: Number(returnsToday[0].n),
+      activeTitles: Number(titles.n),
+      totalCopies: Number(copies.n),
+      availableCopies: Number(available.n),
+      issuedCopies: Number(issued.n),
+      activeMembers: Number(members.n),
+      overdueLoans: Number(overdue.n),
+      reservationsWaiting: Number(reservations.n),
+      outstandingFines: Number(fines.n),
+      collectedFines: Number(collectedFines.n),
+      booksAddedThisMonth: Number(addedMonth.n),
+      issuesToday: Number(issuesToday.n),
+      returnsToday: Number(returnsToday.n),
     },
     recent,
     overdueList,
@@ -171,10 +177,10 @@ export async function circulationSeries({ from, to, branchId }) {
       GROUP BY cat.id ORDER BY copies DESC`,
   );
   const membershipGrowth = await query(
-    `SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS n
+    `SELECT DATE_FORMAT(u.created_at, '%Y-%m') AS month, COUNT(*) AS n
        FROM users u JOIN roles r ON r.id = u.role_id
       WHERE r.code = 'member'
-      GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+      GROUP BY DATE_FORMAT(u.created_at, '%Y-%m')
       ORDER BY month`,
   );
   const overdueTrend = await query(

@@ -211,15 +211,22 @@ export async function runSeed() {
       profile = { id: r.insertId };
       await query('INSERT INTO reading_lists (member_profile_id) VALUES (?)', [profile.id]);
     }
-    const membership = (await query('SELECT id FROM memberships WHERE member_profile_id = ? AND status = ?', [
-      profile.id,
-      'active',
-    ]))[0];
+    await query(
+      `UPDATE memberships SET status = 'expired'
+        WHERE member_profile_id = ? AND status = 'active' AND expires_at < CURDATE()`,
+      [profile.id],
+    );
+    const membership = (await query(
+      `SELECT id FROM memberships
+        WHERE member_profile_id = ? AND status = 'active' AND expires_at >= CURDATE()
+        ORDER BY id DESC LIMIT 1`,
+      [profile.id],
+    ))[0];
     if (!membership) {
       await query(
         `INSERT INTO memberships (member_profile_id, membership_type_id, branch_id, starts_at, expires_at, status)
          VALUES (?, ?, ?, ?, ?, 'active')`,
-        [profile.id, typeIds[type], campus.id, '2025-07-01', '2026-06-30'],
+        [profile.id, typeIds[type], campus.id, toMysqlDate(new Date()), toMysqlDate(addDays(new Date(), 365))],
       );
     }
     memberIds.push(profile.id);

@@ -16,12 +16,13 @@ Base path: `/api/v1`. Swagger UI is served at `/api/docs`; its current OpenAPI d
 - Catalogue: search/suggestions/lookups/details, create/update/archive, add/update copies, reading list and reviews.
 - Members: list/create/detail/update/status/renew and current member profile.
 - Circulation: issue preview/issue, return preview/return, renew, loan list/detail/overdue filtering.
+- Member self-checkout: `POST /loans/self-preview` and `POST /loans/self-issue` accept a book ID and derive member identity from the authenticated session; the server selects a branch-local copy and enforces the waitlist and existing loan policy.
 - Reservations: create/list/cancel.
 - Finance: fine list/waiver, payment record, receipt.
 - Dashboard: role-aware summary and permission-scoped circulation series.
 - Reports: `GET /reports/:type` for inventory, circulation, overdue, financial, members, popularity, lost, acquisitions, memberships, reservations, librarians, and audit; CSV is requested with `format=csv` where supported.
 - Notifications: list, mark one read, mark all read.
-- Administration: users, branches, audit logs, settings, membership types.
+- Administration: users, branches, audit logs, settings, membership types, and active-member announcements. Announcement list/send require `users.manage`; sends are audited and use the `announcement` notification type.
 
 ## Pagination and Filters
 
@@ -31,7 +32,7 @@ List endpoints accept page/limit where implemented. Limits are capped by the sha
 
 ### Issue
 
-`POST /loans/preview-issue` and `POST /loans/issue` accept `{ "memberKey": "member code or student ID", "barcode": "copy barcode", "notes?": "..." }`. Preview returns member/copy, due date, eligibility, reasons, and policy summary. Issue returns loan ID/code and due date. Both require circulation permission.
+Staff `POST /loans/preview-issue` and `POST /loans/issue` accept `{ "memberKey": "member code or student ID", "barcode": "copy barcode", "notes?": "..." }`. Member `POST /loans/self-preview` and `POST /loans/self-issue` accept `{ "bookId": 123 }`; member identity is always taken from the session, never the request body. Preview returns eligibility, reasons, copy, and due date. The issue service locks and updates the chosen copy inside its existing transaction.
 
 ### Return
 

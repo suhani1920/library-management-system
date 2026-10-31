@@ -37,11 +37,19 @@ function MemberOnly({ children }) {
   return user.role === 'member' ? children : <Navigate to="/" replace />
 }
 
+function AdminDashboardAlias() {
+  const { user, status } = useAuth()
+  if (status === 'loading') return <div className="full-loading">Connecting to LibraCore…</div>
+  if (!user) return <Navigate to="/admin/login" replace />
+  return <Navigate to="/" replace />
+}
+
 function AppRoutes() {
   return <>
     <Toaster position="top-right" richColors />
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/admin/login" element={<LoginPage adminOnly />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -58,6 +66,7 @@ function AppRoutes() {
           <Route path="fines" element={<FinesPage />} />
           <Route path="account" element={<MemberOnly><MemberAccountPage /></MemberOnly>} />
       </Route>
+      <Route path="/admin" element={<AdminDashboardAlias />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   </>

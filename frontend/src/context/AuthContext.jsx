@@ -30,7 +30,22 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    try { await api.post('/auth/logout') } finally { setUser(null) }
+    try {
+      await api.post('/auth/logout')
+    } finally {
+      try {
+        window.sessionStorage.clear()
+        for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+          const key = window.localStorage.key(index)
+          if (key?.startsWith('libracore.') || key?.startsWith('libracore:')) {
+            window.localStorage.removeItem(key)
+          }
+        }
+      } catch {
+      }
+      setUser(null)
+      setStatus('ready')
+    }
   }
 
   return <AuthContext.Provider value={{ user, status, login, logout }}>{children}</AuthContext.Provider>

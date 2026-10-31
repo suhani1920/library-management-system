@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Activity, AlertCircle, Building2, Check, Plus, RefreshCw, Shield, UserPlus, Users, X } from 'lucide-react'
+import { Activity, AlertCircle, Bell, Building2, Check, Plus, RefreshCw, Shield, UserPlus, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
@@ -15,7 +15,7 @@ export function AdminPage() {
   const canUsers = permissions.includes('users.manage')
   const canAudit = permissions.includes('audit.view')
   const canBranches = permissions.includes('branches.manage')
-  const tabs = [canSettings && ['settings', 'Settings'], canUsers && ['users', 'User access'], canBranches && ['branches', 'Branches'], canAudit && ['audit', 'Audit log']].filter(Boolean)
+  const tabs = [canSettings && ['settings', 'Settings'], canUsers && ['users', 'User access'], canUsers && ['announcements', 'Announcements'], canBranches && ['branches', 'Branches'], canAudit && ['audit', 'Audit log']].filter(Boolean)
   const [tab, setTab] = useState(tabs[0]?.[0] || 'settings')
   const [response, setResponse] = useState({ key: null, data: {}, errors: {} })
   const [retry, setRetry] = useState(0)
@@ -31,6 +31,7 @@ export function AdminPage() {
     const requests = {}
     if (tab === 'settings' && canSettings) requests.settings = api.get('/admin/settings')
     if (tab === 'users' && canUsers) requests.users = api.get('/admin/users', { params: { page: 1, limit: 100 } })
+    if (tab === 'announcements' && canUsers) requests.announcements = api.get('/admin/announcements')
     if (tab === 'branches' && canBranches) requests.branches = api.get('/admin/branches')
     if (tab === 'audit' && canAudit) requests.audit = api.get('/admin/audit-logs', { params: { page: 1, limit: 100 } })
     Promise.all(Object.entries(requests).map(async ([name, promise]) => {
@@ -84,6 +85,28 @@ export function AdminPage() {
     if (saved) setDialog('')
   }
 
+  async function sendAnnouncement(event) {
+    event.preventDefault()
+    const form = event.currentTarget
+    const values = new FormData(form)
+    setBusy(true)
+    try {
+      const { data } = await api.post('/admin/announcements', {
+        title: values.get('title'),
+        body: values.get('body'),
+      })
+      const result = data.data
+      if (result.failed) toast.warning(`Processed ${result.processed} of ${result.recipients}; ${result.failed} delivery attempts failed.`)
+      else toast.success(`Announcement processed for ${result.processed} of ${result.recipients} active members`)
+      form.reset()
+      setRetry((value) => value + 1)
+    } catch (error) {
+      toast.error(explainError(error, 'Announcement could not be sent.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function saveAction(action, successMessage) {
     setBusy(true)
     try { await action(); toast.success(successMessage); setRetry((value) => value + 1); return true }
@@ -97,11 +120,12 @@ export function AdminPage() {
   }
 
   return <div className="page-enter"><PageHeading eyebrow="SYSTEM CONTROL" title="Administration" description="Manage access, library configuration, branches, and reviewable staff activity."><button className="icon-button" aria-label="Refresh administration data" onClick={() => setRetry((value) => value + 1)}><RefreshCw size={16} /></button></PageHeading>
-    <div className="admin-tabs" role="tablist" aria-label="Administration sections">{tabs.map(([value, label]) => <button key={value} role="tab" aria-selected={tab === value} className={tab === value ? 'admin-tab-active' : ''} onClick={() => setTab(value)}>{value === 'settings' ? <Shield size={15} /> : value === 'users' ? <Users size={15} /> : value === 'branches' ? <Building2 size={15} /> : <Activity size={15} />}{label}</button>)}</div>
+    <div className="admin-tabs" role="tablist" aria-label="Administration sections">{tabs.map(([value, label]) => <button key={value} role="tab" aria-selected={tab === value} className={tab === value ? 'admin-tab-active' : ''} onClick={() => setTab(value)}>{value === 'settings' ? <Shield size={15} /> : value === 'users' ? <Users size={15} /> : value === 'announcements' ? <Bell size={15} /> : value === 'branches' ? <Building2 size={15} /> : <Activity size={15} />}{label}</button>)}</div>
     {loading ? <div className="loading-state"><span className="loading-spinner" />Loading administration data</div> : <>
       {errors[tab] && <div className="banner-error"><AlertCircle size={16} />{errors[tab]}<button onClick={() => setRetry((value) => value + 1)}>Retry</button></div>}
       {tab === 'settings' && data.settings && <section className="panel settings-panel"><div className="panel-heading"><div><span className="eyebrow">GLOBAL CONFIGURATION</span><h2>Library settings</h2></div></div><form className="record-form settings-form" onSubmit={submitSettings}><div className="form-two-col"><label>Product name<input name="product_name" defaultValue={data.settings.product_name || 'LibraCore'} required /></label><label>Currency code<input name="currency" defaultValue={data.settings.currency || 'INR'} maxLength="3" required /></label></div><div className="form-two-col"><label>Lost book default charge (INR)<input name="lost_book_default_charge" type="number" min="0" step="0.01" defaultValue={data.settings.lost_book_default_charge ?? 1500} /></label><label>Damage default charge (INR)<input name="damage_default_charge" type="number" min="0" step="0.01" defaultValue={data.settings.damage_default_charge ?? 400} /></label></div><div className="setting-toggles"><SettingToggle name="guest_catalogue" label="Guest catalogue browsing" detail="Allow unauthenticated visitors to search active titles." checked={data.settings.guest_catalogue} /><SettingToggle name="member_self_register" label="Member self-registration" detail="Allow eligible students to create an account." checked={data.settings.member_self_register} /><SettingToggle name="require_email_verification" label="Require email verification" detail="Hold new registrations pending email verification." checked={data.settings.require_email_verification} /><SettingToggle name="reviews_enabled" label="Book reviews" detail="Allow members to submit catalogue ratings and reviews." checked={data.settings.reviews_enabled} /><SettingToggle name="recommendations_enabled" label="Recommendations" detail="Show category-based suggestions on the member overview." checked={data.settings.recommendations_enabled} /><SettingToggle name="search_history_enabled" label="Search history analytics" detail="Record search terms for aggregate collection insights." checked={data.settings.search_history_enabled} /></div><button className="primary-button settings-save" disabled={busy}><Check size={15} />Save settings</button></form></section>}
       {tab === 'users' && data.users && <section className="panel admin-table-panel"><div className="panel-heading"><div><span className="eyebrow">STAFF ACCESS</span><h2>Accounts</h2></div><button className="primary-button" onClick={() => setDialog('user')}><UserPlus size={15} />Create account</button></div><div className="activity-table-wrap"><table className="data-table"><thead><tr><th>Account</th><th>Role</th><th>Branch</th><th>Last sign-in</th><th>Status</th><th>Action</th></tr></thead><tbody>{(data.users.items || []).map((account) => <tr key={account.id}><td><strong className="table-primary">{account.full_name}</strong><span className="table-secondary">{account.email}</span></td><td>{roleLabels[account.role_code] || account.role_code}</td><td>{account.branch_name || 'Global'}</td><td>{account.last_login_at ? dateFormat.format(new Date(account.last_login_at)) : 'Never'}</td><td><span className={`status-pill status-${account.status}`}>{account.status}</span></td><td>{account.id !== user.id && <button className="text-action" onClick={() => changeUserStatus(account)}>{account.status === 'active' ? 'Suspend' : 'Activate'}</button>}</td></tr>)}</tbody></table>{!data.users.items?.length && <div className="directory-empty"><Users size={20} /><strong>No accounts found</strong></div>}</div></section>}
+      {tab === 'announcements' && data.announcements && <section className="admin-announcement-layout"><section className="panel"><div className="panel-heading"><div><span className="eyebrow">MEMBER COMMUNICATION</span><h2>Send an announcement</h2></div><Bell size={17} /></div><form className="record-form" onSubmit={sendAnnouncement}><div className="announcement-scope"><strong>Recipients</strong><span>Active student/member accounts</span><small>Notifications respect each member's in-app and email preferences. Email delivery requires configured SMTP.</small></div><label>Subject<input name="title" minLength="3" maxLength="180" required placeholder="Example: Upcoming return deadline" /></label><label>Message<textarea name="body" minLength="5" maxLength="2000" rows="5" required placeholder="Include the date and any action students should take." /></label><div className="announcement-form-footer"><span>Creates an in-app notification and audit record.</span><button className="primary-button" disabled={busy}><Bell size={15} />{busy ? 'Sending…' : 'Send announcement'}</button></div></form></section><section className="panel admin-table-panel"><div className="panel-heading"><div><span className="eyebrow">BROADCAST HISTORY</span><h2>Recent announcements</h2></div><button className="icon-button" aria-label="Refresh announcement history" onClick={() => setRetry((value) => value + 1)}><RefreshCw size={15} /></button></div><div className="announcement-history">{data.announcements.map((announcement) => <article className="announcement-entry" key={announcement.id}><div className="announcement-entry-top"><strong>{announcement.title}</strong><time>{dateFormat.format(new Date(announcement.created_at))}</time></div><p>{announcement.body}</p><small>{announcement.recipients} recipients · {announcement.unread} unread</small></article>)}{!data.announcements.length && <div className="directory-empty"><Bell size={18} /><strong>No announcements yet</strong></div>}</div></section></section>}
       {tab === 'branches' && data.branches && <section className="panel branch-table-panel"><div className="panel-heading"><div><span className="eyebrow">CAMPUS LOCATIONS</span><h2>Branches</h2></div><button className="primary-button" onClick={() => setDialog('branch')}><Plus size={15} />Add branch</button></div><div className="branch-grid">{data.branches.map((branch) => <article className="branch-row" key={branch.id}><span className="branch-icon"><Building2 size={18} /></span><span className="branch-details"><strong>{branch.name}</strong><small>{branch.code} · {branch.address || 'Address not listed'}</small><small>{branch.phone || 'No phone'} · {branch.email || 'No email'}</small></span><span className={`status-pill ${branch.is_active ? 'status-active' : 'status-inactive'}`}>{branch.is_active ? 'Active' : 'Inactive'}</span></article>)}</div></section>}
       {tab === 'audit' && data.audit && <section className="panel admin-table-panel"><div className="panel-heading"><div><span className="eyebrow">ACCOUNTABILITY</span><h2>Audit activity</h2></div><span className="report-row-count">{data.audit.pagination?.total || 0} records</span></div><div className="activity-table-wrap"><table className="data-table"><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Record</th><th>Details</th></tr></thead><tbody>{(data.audit.items || []).map((entry) => <tr key={entry.id}><td>{dateFormat.format(new Date(entry.created_at))}</td><td>{entry.full_name || 'System'}</td><td className="mono-cell">{entry.action}</td><td>{entry.entity_type} · {entry.entity_id || '—'}</td><td className="audit-details">{entry.details ? JSON.stringify(entry.details) : '—'}</td></tr>)}</tbody></table>{!data.audit.items?.length && <div className="directory-empty"><Activity size={20} /><strong>No audit events yet</strong></div>}</div></section>}
     </>}

@@ -15,6 +15,7 @@ export function AppShell() {
   const [unread, setUnread] = useState(0)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const [search, setSearch] = useState('')
   const [todayLabel] = useState(() => new Intl.DateTimeFormat('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()))
 
@@ -25,11 +26,14 @@ export function AppShell() {
   }, [location.pathname])
 
   async function signOut() {
+    setSigningOut(true)
     try {
       await logout()
-      navigate('/login', { replace: true })
     } catch (error) {
-      toast.error(error.response?.data?.error?.message || 'Could not end the session.')
+      toast.error(error.response?.data?.error?.message || 'The server could not confirm logout. Your local session was cleared.')
+    } finally {
+      setProfileOpen(false)
+      navigate('/login', { replace: true })
     }
   }
 
@@ -73,7 +77,7 @@ export function AppShell() {
         <button className="profile-row" onClick={() => setProfileOpen((open) => !open)} aria-expanded={profileOpen}>
           <span className="avatar">{initials}</span><span className="profile-copy"><strong>{user.fullName}</strong><small>{roleNames[user.role] || 'Library staff'}</small></span><ChevronDown size={16} className={profileOpen ? 'rotate-icon' : ''} />
         </button>
-        {profileOpen && <button className="signout-menu" onClick={signOut}><LogOut size={16} /> Sign out</button>}
+        {profileOpen && <button className="signout-menu" onClick={signOut} disabled={signingOut}><LogOut size={16} /> Sign out</button>}
       </div>
     </aside>
     <div className="workspace">
@@ -82,6 +86,7 @@ export function AppShell() {
         <div className="breadcrumbs"><span>Library</span><span className="crumb-slash">/</span><strong>{titles[location.pathname] || 'Overview'}</strong></div>
         <form className="global-search" onSubmit={searchCatalogue} role="search"><Search size={17} /><input aria-label="Search the catalogue" placeholder="Search books, authors, ISBN…" value={search} onChange={(event) => setSearch(event.target.value)} /><kbd>↵</kbd></form>
         <button className="top-user icon-button" title={user.fullName} onClick={() => setProfileOpen((open) => !open)}><span className="avatar avatar-small">{initials}</span></button>
+        <button className="logout-button" onClick={signOut} disabled={signingOut} title="End your library session"><LogOut size={16} /><span>{signingOut ? 'Signing out…' : 'Log out'}</span></button>
       </header>
       <main className="page-content"><Outlet /></main>
       <footer className="app-footer"><span>LibraCore</span><span>Campus library services</span><span>{todayLabel}</span><Link to="/catalogue" aria-label="Browse catalogue"><ArrowRight size={14} /></Link></footer>

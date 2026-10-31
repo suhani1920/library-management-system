@@ -40,3 +40,40 @@ test('unknown paths use the safe not-found response', async () => {
   assert.equal(response.status, 404)
   assert.equal(response.body.error.code, 'NOT_FOUND')
 })
+
+test('logout clears auth cookies when called with a valid CSRF token', async () => {
+  const client = request.agent(app)
+  const csrf = await client.get('/api/v1/auth/csrf')
+  const response = await client
+    .post('/api/v1/auth/logout')
+    .set('x-csrf-token', csrf.body.data.csrfToken)
+    .send({})
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(response.body.data, { ok: true })
+  assert.ok(response.headers['set-cookie'].some((cookie) => cookie.startsWith('access_token=') && cookie.includes('Expires=')))
+  assert.ok(response.headers['set-cookie'].some((cookie) => cookie.startsWith('refresh_token=') && cookie.includes('Expires=')))
+})
+
+test('student announcement broadcasts require an authenticated admin session', async () => {
+  const client = request.agent(app)
+  const csrf = await client.get('/api/v1/auth/csrf')
+  const response = await client
+    .post('/api/v1/admin/announcements')
+    .set('x-csrf-token', csrf.body.data.csrfToken)
+    .send({ title: 'Deadline reminder', body: 'Please return books by Friday.' })
+
+  assert.equal(response.status, 401)
+  assert.equal(response.body.error.code, 'UNAUTHORIZED')
+})
+
+test('member self-checkout endpoints require an authenticated session', async () => {
+  const client = request.agent(app)
+  const csrf = await client.get('/api/v1/auth/csrf')
+  const headers = { 'x-csrf-token': csrf.body.data.csrfToken }
+  const preview = await client.post('/api/v1/loans/self-preview').set(headers).send({ bookId: 1 })
+  const issue = await client.post('/api/v1/loans/self-issue').set(headers).send({ bookId: 1 })
+
+  assert.equal(preview.status, 401)
+  assert.equal(issue.status, 401)
+})

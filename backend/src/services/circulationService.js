@@ -88,6 +88,51 @@ export async function previewIssue({ memberKey, barcode }) {
   });
 }
 
+async function memberCopyTarget(userId, bookId) {
+  const member = (await query(
+    `SELECT mp.id, mp.member_code
+       FROM member_profiles mp
+       JOIN memberships ms ON ms.member_profile_id = mp.id AND ms.status = 'active'
+      WHERE mp.user_id = ?
+      ORDER BY ms.id DESC
+      LIMIT 1`,
+    [userId],
+  ))[0];
+  if (!member) throw conflict('No active membership');
+
+  const book = (await query(`SELECT id FROM books WHERE id = ? AND status = 'active'`, [bookId]))[0];
+  if (!book) throw notFound('Book not found');
+
+  const waiting = (await query(
+    `SELECT id FROM reservations WHERE book_id = ? AND status = 'queued' LIMIT 1`,
+    [bookId],
+  ))[0];
+  if (waiting) throw conflict('Copies are being held for members in the reservation queue');
+
+  const branch = (await query(
+    `SELECT branch_id FROM memberships WHERE member_profile_id = ? AND status = 'active' ORDER BY id DESC LIMIT 1`,
+    [member.id],
+  ))[0];
+  const copy = (await query(
+    `SELECT barcode FROM book_copies
+      WHERE book_id = ? AND branch_id = ? AND availability_status = 'available'
+      ORDER BY id LIMIT 1`,
+    [bookId, branch.branch_id],
+  ))[0];
+  if (!copy) throw conflict('No available copy at your home branch');
+  return { memberKey: member.member_code, barcode: copy.barcode };
+}
+
+export async function previewMemberIssue({ userId, bookId }) {
+  const target = await memberCopyTarget(userId, bookId);
+  return previewIssue(target);
+}
+
+export async function issueMemberBook({ userId, bookId, notes, actor, req }) {
+  const target = await memberCopyTarget(userId, bookId);
+  return issueLoan({ ...target, notes, actor, req });
+}
+
 async function evaluateIssue(conn, member, copy) {
   const reasons = [];
   if (member.user_status !== 'active') reasons.push('Member account is not active');

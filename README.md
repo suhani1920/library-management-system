@@ -75,6 +75,14 @@ Swagger UI: http://localhost:4000/api/docs
 
 The app's backend reads `backend/.env`. The seed refuses to run when `NODE_ENV=production`. Seeded accounts/passwords are development-only and configurable through `SEED_ADMIN_*`, `SEED_LIBRARIAN_PASSWORD`, and `SEED_STUDENT_PASSWORD`.
 
+Default development super-admin sign-in (when the seed settings are not overridden):
+
+- URL: http://localhost:5173/admin/login
+- Email: `admin@libracore.local`
+- Password: `ChangeMe#Admin1`
+
+This account is created by `npm run seed`; it is not a public admin-registration flow. If the account already exists, the seed does not reset its password. Set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `backend/.env` before first seeding if you want different development credentials. Never use these defaults in production.
+
 ## Docker Compose
 
 The included Compose definition is intended for local development. Set strong local values in a root `.env` before starting it; defaults are intentionally documented development values.
